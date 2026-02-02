@@ -1,0 +1,13 @@
+//[av-zkp-icao](../../index.md)/[eu.europa.ec.av.zkp.icao](index.md)
+
+# Package-level declarations
+
+## Types
+
+| Name | Summary |
+|---|---|
+| [DataGroupNumber](-data-group-number/index.md) | [androidJvm]<br>@[JvmInline](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin.jvm/-jvm-inline/index.html)<br>value class [DataGroupNumber](-data-group-number/index.md)(val value: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)) |
+| [ExperimentalZkpIcaoApi](-experimental-zkp-icao-api/index.md) | [androidJvm]<br>@[Target](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin.annotation/-target/index.html)(allowedTargets = [[AnnotationTarget.CLASS](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin.annotation/-annotation-target/-c-l-a-s-s/index.html), [AnnotationTarget.FUNCTION](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin.annotation/-annotation-target/-f-u-n-c-t-i-o-n/index.html), [AnnotationTarget.CONSTRUCTOR](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin.annotation/-annotation-target/-c-o-n-s-t-r-u-c-t-o-r/index.html), [AnnotationTarget.PROPERTY](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin.annotation/-annotation-target/-p-r-o-p-e-r-t-y/index.html)])<br>annotation class [ExperimentalZkpIcaoApi](-experimental-zkp-icao-api/index.md)<br>Opt-in annotation for experimental ZkpIcao API. |
+| [ZkpIcao](-zkp-icao/index.md) | [androidJvm]<br>class [ZkpIcao](-zkp-icao/index.md)(context: [Context](https://developer.android.com/reference/kotlin/android/content/Context.html), srsPath: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-string/index.html)? = null, val logger: [ZkpLogger](-zkp-logger/index.md)? = null)<br>ZKP ICAO prover and verifier. Opt-in using [ExperimentalZkpIcaoApi](-experimental-zkp-icao-api/index.md). This is an experimental feature. |
+| [ZkpIcaoData](-zkp-icao-data/index.md) | [androidJvm]<br>data class [ZkpIcaoData](-zkp-icao-data/index.md)(val dgFiles: [Map](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin.collections/-map/index.html)&lt;[DataGroupNumber](-data-group-number/index.md), [ByteArray](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-byte-array/index.html)&gt;, val sodFile: [ByteArray](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-byte-array/index.html), val comFile: [ByteArray](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-byte-array/index.html)) |
+| [ZkpLogger](-zkp-logger/index.md) | [androidJvm]<br>interface [ZkpLogger](-zkp-logger/index.md) |
