@@ -1,10 +1,12 @@
 # Age Verification ZKP ICAO for Android
 
 ## Overview
+
 This project is an **experimental Android library** for age verification using **zero-knowledge proofs (ZKPs)**
 derived from **ICAO-compliant ePassports and ID cards**.
 
 ## Disclaimer
+
 The released software is an initial development release version:
 
 - The initial development release is an early endeavor reflecting the efforts of a short timeboxed
@@ -26,15 +28,32 @@ The released software is an initial development release version:
 - Only the latest version of the software will be supported
 
 ## Dependencies
-Add the library to your `build.gradle` file:
 
-```groovy
+To use **SNAPSHOT** versions, add the following repository to your project’s `settings.gradle.kts`:
+
+```kotlin
+dependencyResolutionManagement {
+  repositories {
+    // ...
+    maven {
+      url = uri("https://central.sonatype.com/repository/maven-snapshots/")
+      mavenContent { snapshotsOnly() }
+    }
+    // ...
+  }
+}
+```
+
+To include the library in your project, add the dependency to your app module's `build.gradle.kts`:
+
+```kotlin
 dependencies {
-    // TODO()
+    implementation("eu.europa.ec.eudi:av-lib-android-zkp-age-icao:0.0.1-SNAPSHOT")
 }
 ```
 
 ## Usage
+
 In your Android project, you can use the library as follows:
 
 ```kotlin
