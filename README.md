@@ -5,6 +5,30 @@
 This project is an **experimental Android library** for age verification using **zero-knowledge proofs (ZKPs)**
 derived from **ICAO-compliant ePassports and ID cards**.
 
+## Scope and Limitations
+
+> **Note:** The current circuit implementation supports only a specific subset of ICAO-compliant ePassports and cryptographic configurations.
+
+### Supported Cryptographic Parameters
+
+The circuit currently assumes the following:
+
+- **DSC certificate signature algorithm:**  
+  RSA PKCS#1 v1.5 with SHA-256
+
+- **SOD signature algorithm:**  
+  RSASSA-PSS with SHA-256
+
+- **CSC public key:**  
+  RSA-4096
+
+- **DSC public key:**  
+  RSA-3072
+
+- **TBSCertificate size:**  
+  1600 bytes
+
+
 ## Disclaimer
 
 The released software is an initial development release version:

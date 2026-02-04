@@ -48,9 +48,9 @@ fun ZKPGenerationScreen(nfcViewModel: NfcViewModel) {
             context = context,
             logger = zkpLogger
         )
-        val zkpPassportData = nfcViewModel.zkpIcaoData
-        if (zkpPassportData != null) {
-            val result = withContext(Dispatchers.IO) { zkpIcao.prove(zkpPassportData) }
+        val zkpIcaoData = nfcViewModel.zkpIcaoData
+        if (zkpIcaoData != null) {
+            val result = withContext(Dispatchers.IO) { zkpIcao.prove(zkpIcaoData) }
             result.onSuccess { p ->
                 proof = p
                 val verifyResult = withContext(Dispatchers.IO) { zkpIcao.verify(p) }
