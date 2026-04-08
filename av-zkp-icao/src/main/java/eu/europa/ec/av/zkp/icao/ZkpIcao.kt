@@ -18,6 +18,9 @@ package eu.europa.ec.av.zkp.icao
 import android.content.Context
 import eu.europa.ec.av.zkp.icao.internal.ZkpJsEngine
 import eu.europa.ec.av.zkp.icao.internal.ZkpProver
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.jmrtd.lds.SODFile
 import org.jmrtd.lds.icao.DG1File
@@ -72,11 +75,28 @@ class ZkpIcao(context: Context, srsPath: String? = null, val logger: ZkpLogger? 
 
     private val zkpJsEngine: ZkpJsEngine by lazy { ZkpJsEngine(context) }
 
-    suspend fun prove(zkpIcaoData: ZkpIcaoData): Result<String> {
+    /**
+     * Generates a zero-knowledge proof for the given passport/ID card data and age attestations.
+     *
+     * @param zkpIcaoData The passport/ID card data read via NFC.
+     * @param ageAttestations Age attestation rules where key is the age threshold (1–99)
+     *  and value is `true` to attest "is equal to or larger than that age" or `false` to attest "is smaller than that age".
+     *  Maximum 8 entries.
+     *  Example: `mapOf(18 to true, 21 to true, 65 to false)` attests is equal to or larger than 18,
+     *  equal to or larger than 21, smaller than 65.
+     *  @return Result containing ZkpProofResult on success, or error message on failure.
+     */
+    suspend fun prove(zkpIcaoData: ZkpIcaoData, ageAttestations: Map<Int, Boolean>): Result<ZkpProofResult> {
 
         // Validate input data
         zkpIcaoData.validate().onFailure { error ->
             logger?.e("ZkpIcao", "Invalid ZkpIcaoData: ${error.message}", error)
+            return Result.failure(error)
+        }
+
+        // Validate age attestations
+        validateAgeAttestations(ageAttestations).onFailure { error ->
+            logger?.e("ZkpIcao", "Invalid age attestations: ${error.message}", error)
             return Result.failure(error)
         }
 
@@ -85,7 +105,12 @@ class ZkpIcao(context: Context, srsPath: String? = null, val logger: ZkpLogger? 
             logger?.d("ZkpIcao", "Input JSON for ZKP circuit: $inputJson")
             zkpJsEngine.init()
             val resultJson = zkpJsEngine.generateArtifacts(inputJson.toString())
-            zkpProver.prove(resultJson)
+            zkpProver.prove(resultJson, ageAttestations).map { proof ->
+                val data = ageAttestations.entries.associate { (age, isOver) ->
+                    "age_over_${age.toString().padStart(2, '0')}" to isOver
+                }
+                ZkpProofResult(ageAttestations = data, proof = proof)
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -125,7 +150,7 @@ private fun buildJson(
         put("name", JsonPrimitive(mrzInfo.secondaryIdentifier + " " + mrzInfo.primaryIdentifier))
         put("dateOfBirth", JsonPrimitive(mrzInfo.dateOfBirth))
         put("nationality", JsonPrimitive(mrzInfo.nationality))
-        put("gender", JsonPrimitive(mrzInfo.gender.toShort()))
+        put("gender", JsonPrimitive(mrzInfo.genderCode.toShort()))
         put("passportNumber", JsonPrimitive(mrzInfo.documentNumber))
         put("passportExpiry", JsonPrimitive(mrzInfo.dateOfExpiry))
         put("firstName", JsonPrimitive(mrzInfo.secondaryIdentifier))
@@ -208,6 +233,35 @@ data class ZkpIcaoData(
         result = 31 * result + sodFile.contentHashCode()
         return result
     }
+}
+
+/**
+ * Result of a ZKP proof generation, containing the age attestation claims and the proof.
+ *
+ * @param ageAttestations The age attestation claims, e.g. `{"age_over_18": true, "age_over_65": false}`.
+ * @param proof The generated proof in Base64 format.
+ */
+@Serializable
+data class ZkpProofResult(
+    @SerialName("data")
+    val ageAttestations: Map<String, Boolean>,
+    val proof: String
+) {
+    fun toJson(): String = Json.encodeToString(this)
+}
+
+private fun validateAgeAttestations(ageAttestations: Map<Int, Boolean>): Result<Unit> {
+    if (ageAttestations.isEmpty()) {
+        return Result.failure(IllegalArgumentException("Age attestations must not be empty"))
+    }
+    if (ageAttestations.size > 8) {
+        return Result.failure(IllegalArgumentException("Age attestations must not exceed 8 entries"))
+    }
+    val invalidAges = ageAttestations.keys.filter { it !in 1..99 }
+    if (invalidAges.isNotEmpty()) {
+        return Result.failure(IllegalArgumentException("Age thresholds must be between 1 and 99, got: $invalidAges"))
+    }
+    return Result.success(Unit)
 }
 
 private fun ZkpIcaoData.validate(): Result<Unit> {
