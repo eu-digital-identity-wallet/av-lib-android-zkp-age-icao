@@ -29,17 +29,12 @@ import androidx.core.content.FileProvider
 import eu.europa.ec.av.zkp.icao.app.ui.screens.nfc.NfcViewModel
 import eu.europa.ec.av.zkp.icao.app.util.Log
 import eu.europa.ec.av.zkp.icao.app.util.zkpLogger
-import eu.europa.ec.av.zkp.icao.DataGroupNumber
 import eu.europa.ec.av.zkp.icao.ExperimentalZkpIcaoApi
 import eu.europa.ec.av.zkp.icao.ZkpIcao
-import eu.europa.ec.av.zkp.icao.ZkpIcaoData
+import eu.europa.ec.av.zkp.icao.buildAgeAttestations
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jmrtd.lds.icao.DG1File
-import java.io.ByteArrayInputStream
 import java.io.File
-import java.time.LocalDate
-import java.time.Period
 
 @OptIn(ExperimentalZkpIcaoApi::class)
 @Composable
@@ -57,7 +52,7 @@ fun ZKPGenerationScreen(nfcViewModel: NfcViewModel) {
         )
         val zkpIcaoData = nfcViewModel.zkpIcaoData
         if (zkpIcaoData != null) {
-            val ageAttestations = buildAgeAttestations(zkpIcaoData, ageThresholds)
+            val ageAttestations = zkpIcaoData.buildAgeAttestations(ageThresholds)
             Log.d("ZKPGenerationScreen", "Age attestations: $ageAttestations")
             val result = withContext(Dispatchers.IO) { zkpIcao.prove(zkpIcaoData, ageAttestations) }
             result.onSuccess { zkpProofResult ->
@@ -131,32 +126,4 @@ fun ZKPGenerationScreen(nfcViewModel: NfcViewModel) {
             }
         }
     }
-}
-
-/**
- * Parses the date of birth from DG1 in [zkpIcaoData], calculates the holder's age,
- * and returns a map of each threshold to whether the holder is >= that age.
- */
-private fun buildAgeAttestations(
-    zkpIcaoData: ZkpIcaoData,
-    ageThresholds: List<Int>
-): Map<Int, Boolean> {
-    val dg1Bytes = zkpIcaoData.dgFiles.getValue(DataGroupNumber(1))
-    val dg1File = ByteArrayInputStream(dg1Bytes).use { DG1File(it) }
-    val dateOfBirth = parseMrzDate(dg1File.mrzInfo.dateOfBirth)
-    val age = Period.between(dateOfBirth, LocalDate.now()).years
-    return ageThresholds.associateWith { threshold -> age >= threshold }
-}
-
-/**
- * Parses an MRZ date string (YYMMDD) into a [LocalDate].
- * Years 00–99 are interpreted as: > current year's last two digits → 1900s, otherwise → 2000s.
- */
-private fun parseMrzDate(yymmdd: String): LocalDate {
-    val yy = yymmdd.substring(0, 2).toInt()
-    val mm = yymmdd.substring(2, 4).toInt()
-    val dd = yymmdd.substring(4, 6).toInt()
-    val currentYY = LocalDate.now().year % 100
-    val year = if (yy > currentYY) 1900 + yy else 2000 + yy
-    return LocalDate.of(year, mm, dd)
 }

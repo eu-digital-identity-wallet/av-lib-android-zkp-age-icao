@@ -32,6 +32,9 @@ import kotlinx.serialization.json.buildJsonObject
 import net.sf.scuba.data.Gender
 import org.jmrtd.lds.icao.COMFile
 import java.security.MessageDigest
+import java.time.LocalDate
+import java.time.Period
+import java.time.ZoneOffset
 import java.util.Base64
 
 /**
@@ -233,6 +236,43 @@ data class ZkpIcaoData(
         result = 31 * result + sodFile.contentHashCode()
         return result
     }
+}
+
+/**
+ * Parses the date of birth from DG1 in this [ZkpIcaoData], calculates the holder's age,
+ * and returns a map of each threshold to whether the holder is >= that age.
+ *
+ * @param ageThresholds list of age thresholds (1–99) to check against.
+ * @param referenceDate the date to calculate the age against. Defaults to today's date in UTC.
+ *  This should match the circuit's `current_date` reference for consistency.
+ * @return map where each key is a threshold and the value is `true` if the holder's age >= threshold.
+ */
+@ExperimentalZkpIcaoApi
+fun ZkpIcaoData.buildAgeAttestations(
+    ageThresholds: List<Int>,
+    referenceDate: LocalDate = LocalDate.now(ZoneOffset.UTC)
+): Map<Int, Boolean> {
+    val dg1Bytes = dgFiles.getValue(DataGroupNumber(1))
+    val dg1File = dg1Bytes.toInputStream().use { DG1File(it) }
+    val dateOfBirth = parseMrzDate(dg1File.mrzInfo.dateOfBirth, referenceDate.year)
+    val age = Period.between(dateOfBirth, referenceDate).years
+    return ageThresholds.associateWith { threshold -> age >= threshold }
+}
+
+/**
+ * Parses an MRZ date string (YYMMDD) into a [LocalDate].
+ * Years 00–99 are interpreted as: > current year's last two digits → 1900s, otherwise → 2000s.
+ *
+ * @param yymmdd the MRZ date string in YYMMDD format.
+ * @param referenceYear the full 4-digit year to use as the pivot for 2-digit year interpretation.
+ */
+private fun parseMrzDate(yymmdd: String, referenceYear: Int): LocalDate {
+    val yy = yymmdd.substring(0, 2).toInt()
+    val mm = yymmdd.substring(2, 4).toInt()
+    val dd = yymmdd.substring(4, 6).toInt()
+    val currentYY = referenceYear % 100
+    val year = if (yy > currentYY) 1900 + yy else 2000 + yy
+    return LocalDate.of(year, mm, dd)
 }
 
 /**

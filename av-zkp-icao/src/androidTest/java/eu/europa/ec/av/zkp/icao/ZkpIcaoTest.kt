@@ -10,6 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import eu.europa.ec.av.zkp.icao.test.R
+import java.time.LocalDate
 
 @RunWith(AndroidJUnit4::class)
 class ZkpIcaoTest {
@@ -31,19 +32,30 @@ class ZkpIcaoTest {
             context = context,
             srsPath = getLocalSrs(
                 context,
-                eu.europa.ec.av.zkp.icao.test.R.raw.srs
+                R.raw.srs
             ).absolutePath // Here we use a local SRS file for testing
         )
 
+        // val referenceDate = LocalDate.now()
+        val ageAttestations = zkpIcaoData.buildAgeAttestations(listOf(18, 21, 30, 65))
+
         // First, generate the proof
-        val result = zkpIcao.prove(zkpIcaoData)
+        val result = zkpIcao.prove(zkpIcaoData, ageAttestations)
         Assert.assertTrue(result.isSuccess)
-        val proof = result.getOrNull()
-        Assert.assertNotNull("Proof should not be null on success", proof)
-        Assert.assertTrue("Proof string should not be empty", proof!!.isNotEmpty())
+
+        val zkpProofResult = result.getOrNull()
+        Assert.assertNotNull("ZkpProofResult should not be null on success", zkpProofResult)
+        Assert.assertTrue("Proof string should not be empty", zkpProofResult!!.proof.isNotEmpty())
+
+        Assert.assertEquals("Should have 4 age attestation entries", 4, zkpProofResult.ageAttestations.size)
+
+        Assert.assertTrue("Should contain age_over_18", zkpProofResult.ageAttestations.containsKey("age_over_18"))
+        Assert.assertTrue("Should contain age_over_21", zkpProofResult.ageAttestations.containsKey("age_over_21"))
+        Assert.assertTrue("Should contain age_over_30", zkpProofResult.ageAttestations.containsKey("age_over_30"))
+        Assert.assertTrue("Should contain age_over_65", zkpProofResult.ageAttestations.containsKey("age_over_65"))
 
         // Now verify the proof
-        val verification = zkpIcao.verify(proof)
+        val verification = zkpIcao.verify(zkpProofResult.proof)
         Assert.assertTrue(verification.isSuccess)
         val isValid = verification.getOrNull()
         Assert.assertNotNull("Verification result should not be null on success", isValid)
@@ -67,7 +79,7 @@ class ZkpIcaoTest {
         )
 
         runBlocking {
-            val result = zkpIcao.prove(emptyData)
+            val result = zkpIcao.prove(emptyData, mapOf(18 to true))
             Assert.assertTrue("Proving should fail with empty data", result.isFailure)
         }
     }
