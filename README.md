@@ -72,7 +72,7 @@ To include the library in your project, add the dependency to your app module's 
 
 ```kotlin
 dependencies {
-    implementation("eu.europa.ec.eudi:av-lib-android-zkp-age-icao:0.0.1-SNAPSHOT")
+    implementation("eu.europa.ec.eudi:av-lib-android-zkp-age-icao:0.0.2-SNAPSHOT")
 }
 ```
 
@@ -87,7 +87,7 @@ In your Android project, you can use the library as follows:
 val dg1Bytes: ByteArray = byteArrayOf(/* Read DG1 file bytes */)
 val sodBytes: ByteArray = byteArrayOf(/* Read SOD file bytes */)
 val comBytes: ByteArray = byteArrayOf(/* Read COM file bytes */)
-    
+
 val zkpData = ZkpIcaoData(
     dgFiles = mapOf(
         DataGroupNumber(1) to dg1Bytes
@@ -103,16 +103,70 @@ val zkpIcao = ZkpIcao(
     logger = null   // Optional: your own ZkpLogger implementation
 )
 
+// Define which age thresholds to attest and whether the holder claims to be over each one.
+// Key = age threshold (0–99), Value = true for "is over or equal to", false for "is under".
+// Up to 8 entries are supported.
+val ageAttestations = mapOf(
+    18 to true,   // claim: holder is 18 or older
+    21 to true,   // claim: holder is 21 or older
+    65 to false   // claim: holder is under 65
+)
+
+// Or, derive the booleans automatically from the holder's date of birth in DG1:
+val ageAttestations = zkpData.buildAgeAttestations(listOf(18, 21, 65))
+
 // Generate the zero-knowledge proof
-val proofResult = zkpIcao.prove(zkpData)
+val proofResult = zkpIcao.prove(zkpData, ageAttestations)
 proofResult
-    .onSuccess { proof ->
-        // Handle successful proof generation
+    .onSuccess { zkpProofResult ->
+        // zkpProofResult.ageAttestations -> {"age_over_18": true, "age_over_21": true, "age_over_65": false}
+        // zkpProofResult.proof           -> Base64-encoded ZK proof
+        val jsonPayload = zkpProofResult.toJson() // ready to send to a verifier
     }
     .onFailure { error ->
         // Handle proof generation errors
     }
 ```
+
+### Age attestations
+
+The library proves **age-over claims** in zero knowledge: the verifier learns whether
+the holder's age satisfies each claim and not the actual date of birth.
+
+- **`ageAttestations: Map<Int, Boolean>`** — passed to `prove()`. These are the claims the
+  holder (or the verifier, via the holder's app) wants the proof to certify.
+    - Key is the age threshold (`0..99`); value is the claim being made:
+      `true` means "holder is **≥** that age", `false` means "holder is **<** that age".
+    - Up to **8 claims** are supported per proof.
+    - The ZK circuit verifies each claim against the holder's date of birth (extracted from
+      DG1) and today's UTC date. If any claim is false for the actual data (e.g. the map
+      says `18 to true` but the holder is 15), proof generation fails — you cannot forge a
+      false claim.
+
+- **`ZkpIcaoData.buildAgeAttestations(thresholds, referenceDate)`** — convenience helper that
+  parses DG1, calculates the holder's age against `referenceDate` (defaults to today in UTC),
+  and returns the `Map<Int, Boolean>` you pass to `prove()`. Use this when you want to
+  automatically fill in truthful claims for a list of thresholds.
+
+- **`ZkpProofResult`** — the success value returned by `prove()`:
+    ```kotlin
+    @Serializable
+    data class ZkpProofResult(
+        val ageAttestations: Map<String, Boolean>, // e.g. {"age_over_18": true, ...}
+        val proof: String                          // Base64-encoded ZK proof
+    ) {
+        fun toJson(): String
+    }
+    ```
+  `toJson()` serializes the result as:
+    ```json
+    {
+      "data": { "age_over_18": true, "age_over_21": true, "age_over_65": false },
+      "proof": "..."
+    }
+    ```
+  This payload is ready to send to a verifier, which can check the proof against the
+  claims.
 
 ### Structured Reference String (SRS)
 

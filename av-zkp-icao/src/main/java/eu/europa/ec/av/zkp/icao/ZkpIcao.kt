@@ -18,6 +18,9 @@ package eu.europa.ec.av.zkp.icao
 import android.content.Context
 import eu.europa.ec.av.zkp.icao.internal.ZkpJsEngine
 import eu.europa.ec.av.zkp.icao.internal.ZkpProver
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.jmrtd.lds.SODFile
 import org.jmrtd.lds.icao.DG1File
@@ -29,6 +32,9 @@ import kotlinx.serialization.json.buildJsonObject
 import net.sf.scuba.data.Gender
 import org.jmrtd.lds.icao.COMFile
 import java.security.MessageDigest
+import java.time.LocalDate
+import java.time.Period
+import java.time.ZoneOffset
 import java.util.Base64
 
 /**
@@ -72,11 +78,34 @@ class ZkpIcao(context: Context, srsPath: String? = null, val logger: ZkpLogger? 
 
     private val zkpJsEngine: ZkpJsEngine by lazy { ZkpJsEngine(context) }
 
-    suspend fun prove(zkpIcaoData: ZkpIcaoData): Result<String> {
+    /**
+     * Generates a zero-knowledge proof for the given passport/ID card data and age attestations.
+     *
+     * @param zkpIcaoData The passport/ID card data read via NFC.
+     * @param ageAttestations Age attestation claims where key is the age threshold (0–99)
+     *  and value is `true` to claim "is equal to or larger than that age" or `false` to claim
+     *  "is smaller than that age". Maximum 8 entries. The ZK circuit verifies each claim
+     *  against the actual date of birth — if any claim is false for the real data,
+     *  proof generation fails.
+     *
+     *  Example: `mapOf(18 to true, 21 to true, 65 to false)` claims the holder is
+     *  at least 18, at least 21, and under 65.
+     *
+     *  To derive these booleans automatically from the DG1 date of birth, use
+     *  [ZkpIcaoData.buildAgeAttestations].
+     * @return Result containing [ZkpProofResult] on success, or error on failure.
+     */
+    suspend fun prove(zkpIcaoData: ZkpIcaoData, ageAttestations: Map<Int, Boolean>): Result<ZkpProofResult> {
 
         // Validate input data
         zkpIcaoData.validate().onFailure { error ->
             logger?.e("ZkpIcao", "Invalid ZkpIcaoData: ${error.message}", error)
+            return Result.failure(error)
+        }
+
+        // Validate age attestations
+        validateAgeAttestations(ageAttestations).onFailure { error ->
+            logger?.e("ZkpIcao", "Invalid age attestations: ${error.message}", error)
             return Result.failure(error)
         }
 
@@ -85,13 +114,22 @@ class ZkpIcao(context: Context, srsPath: String? = null, val logger: ZkpLogger? 
             logger?.d("ZkpIcao", "Input JSON for ZKP circuit: $inputJson")
             zkpJsEngine.init()
             val resultJson = zkpJsEngine.generateArtifacts(inputJson.toString())
-            zkpProver.prove(resultJson)
+            zkpProver.prove(resultJson, ageAttestations).map { proof ->
+                val data = ageAttestations.entries.associate { (age, isOver) ->
+                    "age_over_${age.toString().padStart(2, '0')}" to isOver
+                }
+                ZkpProofResult(ageAttestations = data, proof = proof)
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    suspend fun verify(proofBase64: String): Result<Boolean> {
+    /**
+     * Verifies a generated ZKP proof. This is intended for internal testing only —
+     * production verification is performed server-side by the verifier.
+     */
+    internal suspend fun verify(proofBase64: String): Result<Boolean> {
         return zkpProver.verify(proofBase64)
     }
 }
@@ -125,7 +163,7 @@ private fun buildJson(
         put("name", JsonPrimitive(mrzInfo.secondaryIdentifier + " " + mrzInfo.primaryIdentifier))
         put("dateOfBirth", JsonPrimitive(mrzInfo.dateOfBirth))
         put("nationality", JsonPrimitive(mrzInfo.nationality))
-        put("gender", JsonPrimitive(mrzInfo.gender.toShort()))
+        put("gender", JsonPrimitive(mrzInfo.genderCode.toShort()))
         put("passportNumber", JsonPrimitive(mrzInfo.documentNumber))
         put("passportExpiry", JsonPrimitive(mrzInfo.dateOfExpiry))
         put("firstName", JsonPrimitive(mrzInfo.secondaryIdentifier))
@@ -208,6 +246,72 @@ data class ZkpIcaoData(
         result = 31 * result + sodFile.contentHashCode()
         return result
     }
+}
+
+/**
+ * Parses the date of birth from DG1 in this [ZkpIcaoData], calculates the holder's age,
+ * and returns a map of each threshold to whether the holder is >= that age.
+ *
+ * @param ageThresholds list of age thresholds (0–99) to check against.
+ * @param referenceDate the date to calculate the age against. Defaults to today's date in UTC.
+ *  This should match the circuit's `current_date` reference for consistency.
+ * @return map where each key is a threshold and the value is `true` if the holder's age >= threshold.
+ */
+@ExperimentalZkpIcaoApi
+fun ZkpIcaoData.buildAgeAttestations(
+    ageThresholds: List<Int>,
+    referenceDate: LocalDate = LocalDate.now(ZoneOffset.UTC)
+): Map<Int, Boolean> {
+    val dg1Bytes = dgFiles.getValue(DataGroupNumber(1))
+    val dg1File = dg1Bytes.toInputStream().use { DG1File(it) }
+    val dateOfBirth = parseMrzDate(dg1File.mrzInfo.dateOfBirth, referenceDate.year)
+    val age = Period.between(dateOfBirth, referenceDate).years
+    return ageThresholds.associateWith { threshold -> age >= threshold }
+}
+
+/**
+ * Parses an MRZ date string (YYMMDD) into a [LocalDate].
+ * Years 00–99 are interpreted as: > current year's last two digits → 1900s, otherwise → 2000s.
+ *
+ * @param yymmdd the MRZ date string in YYMMDD format.
+ * @param referenceYear the full 4-digit year to use as the pivot for 2-digit year interpretation.
+ */
+private fun parseMrzDate(yymmdd: String, referenceYear: Int): LocalDate {
+    val yy = yymmdd.substring(0, 2).toInt()
+    val mm = yymmdd.substring(2, 4).toInt()
+    val dd = yymmdd.substring(4, 6).toInt()
+    val currentYY = referenceYear % 100
+    val year = if (yy > currentYY) 1900 + yy else 2000 + yy
+    return LocalDate.of(year, mm, dd)
+}
+
+/**
+ * Result of a ZKP proof generation, containing the age attestation claims and the proof.
+ *
+ * @param ageAttestations The age attestation claims, e.g. `{"age_over_18": true, "age_over_65": false}`.
+ * @param proof The generated proof in Base64 format.
+ */
+@Serializable
+data class ZkpProofResult(
+    @SerialName("data")
+    val ageAttestations: Map<String, Boolean>,
+    val proof: String
+) {
+    fun toJson(): String = Json.encodeToString(this)
+}
+
+private fun validateAgeAttestations(ageAttestations: Map<Int, Boolean>): Result<Unit> {
+    if (ageAttestations.isEmpty()) {
+        return Result.failure(IllegalArgumentException("Age attestations must not be empty"))
+    }
+    if (ageAttestations.size > 8) {
+        return Result.failure(IllegalArgumentException("Age attestations must not exceed 8 entries"))
+    }
+    val invalidAges = ageAttestations.keys.filter { it !in 0..99 }
+    if (invalidAges.isNotEmpty()) {
+        return Result.failure(IllegalArgumentException("Age thresholds must be between 0 and 99, got: $invalidAges"))
+    }
+    return Result.success(Unit)
 }
 
 private fun ZkpIcaoData.validate(): Result<Unit> {

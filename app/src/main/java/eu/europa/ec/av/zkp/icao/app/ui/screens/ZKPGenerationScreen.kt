@@ -31,6 +31,7 @@ import eu.europa.ec.av.zkp.icao.app.util.Log
 import eu.europa.ec.av.zkp.icao.app.util.zkpLogger
 import eu.europa.ec.av.zkp.icao.ExperimentalZkpIcaoApi
 import eu.europa.ec.av.zkp.icao.ZkpIcao
+import eu.europa.ec.av.zkp.icao.buildAgeAttestations
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -38,9 +39,9 @@ import java.io.File
 @OptIn(ExperimentalZkpIcaoApi::class)
 @Composable
 fun ZKPGenerationScreen(nfcViewModel: NfcViewModel) {
+    val ageThresholds = listOf(18, 21, 30, 65)
     var loading by remember { mutableStateOf(true) }
     var proof by remember { mutableStateOf<String?>(null) }
-    var isValid by remember { mutableStateOf<Boolean?>(null) }
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -50,16 +51,10 @@ fun ZKPGenerationScreen(nfcViewModel: NfcViewModel) {
         )
         val zkpIcaoData = nfcViewModel.zkpIcaoData
         if (zkpIcaoData != null) {
-            val result = withContext(Dispatchers.IO) { zkpIcao.prove(zkpIcaoData) }
-            result.onSuccess { p ->
-                proof = p
-                val verifyResult = withContext(Dispatchers.IO) { zkpIcao.verify(p) }
-                verifyResult.onSuccess { valid ->
-                    isValid = valid
-                }.onFailure {
-                    isValid = false
-                    Log.e("ZKPGenerationScreen", "Failed to verify ZKP proof", it)
-                }
+            val ageAttestations = zkpIcaoData.buildAgeAttestations(ageThresholds)
+            val result = withContext(Dispatchers.IO) { zkpIcao.prove(zkpIcaoData, ageAttestations) }
+            result.onSuccess { zkpProofResult ->
+                proof = zkpProofResult.toJson()
             }.onFailure {
                 proof = null
                 Log.e("ZKPGenerationScreen", "Failed to generate ZKP proof", it)
@@ -79,8 +74,7 @@ fun ZKPGenerationScreen(nfcViewModel: NfcViewModel) {
         } else {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Proof: ${if (proof != null) "Generated successfully" else "Generated failed"}")
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Valid: ${isValid?.toString() ?: "N/A"}")
+                Text("For age thresholds: ${ageThresholds.joinToString(", ")}")
                 Spacer(modifier = Modifier.height(16.dp))
                 if (proof != null) {
                     Button(
