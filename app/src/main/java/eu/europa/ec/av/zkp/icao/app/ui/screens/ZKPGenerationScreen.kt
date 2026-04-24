@@ -42,7 +42,6 @@ fun ZKPGenerationScreen(nfcViewModel: NfcViewModel) {
     val ageThresholds = listOf(18, 21, 30, 65)
     var loading by remember { mutableStateOf(true) }
     var proof by remember { mutableStateOf<String?>(null) }
-    var isValid by remember { mutableStateOf<Boolean?>(null) }
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -53,17 +52,9 @@ fun ZKPGenerationScreen(nfcViewModel: NfcViewModel) {
         val zkpIcaoData = nfcViewModel.zkpIcaoData
         if (zkpIcaoData != null) {
             val ageAttestations = zkpIcaoData.buildAgeAttestations(ageThresholds)
-            Log.d("ZKPGenerationScreen", "Age attestations: $ageAttestations")
             val result = withContext(Dispatchers.IO) { zkpIcao.prove(zkpIcaoData, ageAttestations) }
             result.onSuccess { zkpProofResult ->
                 proof = zkpProofResult.toJson()
-                val verifyResult = withContext(Dispatchers.IO) { zkpIcao.verify(zkpProofResult.proof) }
-                verifyResult.onSuccess { valid ->
-                    isValid = valid
-                }.onFailure {
-                    isValid = false
-                    Log.e("ZKPGenerationScreen", "Failed to verify ZKP proof", it)
-                }
             }.onFailure {
                 proof = null
                 Log.e("ZKPGenerationScreen", "Failed to generate ZKP proof", it)
@@ -84,8 +75,6 @@ fun ZKPGenerationScreen(nfcViewModel: NfcViewModel) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Proof: ${if (proof != null) "Generated successfully" else "Generated failed"}")
                 Text("For age thresholds: ${ageThresholds.joinToString(", ")}")
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Valid: ${isValid?.toString() ?: "N/A"}")
                 Spacer(modifier = Modifier.height(16.dp))
                 if (proof != null) {
                     Button(

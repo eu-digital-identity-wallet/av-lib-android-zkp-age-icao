@@ -82,12 +82,18 @@ class ZkpIcao(context: Context, srsPath: String? = null, val logger: ZkpLogger? 
      * Generates a zero-knowledge proof for the given passport/ID card data and age attestations.
      *
      * @param zkpIcaoData The passport/ID card data read via NFC.
-     * @param ageAttestations Age attestation rules where key is the age threshold (0–99)
-     *  and value is `true` to attest "is equal to or larger than that age" or `false` to attest "is smaller than that age".
-     *  Maximum 8 entries.
-     *  Example: `mapOf(18 to true, 21 to true, 65 to false)` attests is equal to or larger than 18,
-     *  equal to or larger than 21, smaller than 65.
-     *  @return Result containing ZkpProofResult on success, or error message on failure.
+     * @param ageAttestations Age attestation claims where key is the age threshold (0–99)
+     *  and value is `true` to claim "is equal to or larger than that age" or `false` to claim
+     *  "is smaller than that age". Maximum 8 entries. The ZK circuit verifies each claim
+     *  against the actual date of birth — if any claim is false for the real data,
+     *  proof generation fails.
+     *
+     *  Example: `mapOf(18 to true, 21 to true, 65 to false)` claims the holder is
+     *  at least 18, at least 21, and under 65.
+     *
+     *  To derive these booleans automatically from the DG1 date of birth, use
+     *  [ZkpIcaoData.buildAgeAttestations].
+     * @return Result containing [ZkpProofResult] on success, or error on failure.
      */
     suspend fun prove(zkpIcaoData: ZkpIcaoData, ageAttestations: Map<Int, Boolean>): Result<ZkpProofResult> {
 
@@ -119,7 +125,11 @@ class ZkpIcao(context: Context, srsPath: String? = null, val logger: ZkpLogger? 
         }
     }
 
-    suspend fun verify(proofBase64: String): Result<Boolean> {
+    /**
+     * Verifies a generated ZKP proof. This is intended for internal testing only —
+     * production verification is performed server-side by the verifier.
+     */
+    internal suspend fun verify(proofBase64: String): Result<Boolean> {
         return zkpProver.verify(proofBase64)
     }
 }
