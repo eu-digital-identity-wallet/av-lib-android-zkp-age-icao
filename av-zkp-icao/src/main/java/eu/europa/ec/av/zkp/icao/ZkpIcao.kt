@@ -82,7 +82,7 @@ class ZkpIcao(context: Context, srsPath: String? = null, val logger: ZkpLogger? 
      * Generates a zero-knowledge proof for the given passport/ID card data and age attestations.
      *
      * @param zkpIcaoData The passport/ID card data read via NFC.
-     * @param ageAttestations Age attestation rules where key is the age threshold (1–99)
+     * @param ageAttestations Age attestation rules where key is the age threshold (0–99)
      *  and value is `true` to attest "is equal to or larger than that age" or `false` to attest "is smaller than that age".
      *  Maximum 8 entries.
      *  Example: `mapOf(18 to true, 21 to true, 65 to false)` attests is equal to or larger than 18,
@@ -242,7 +242,7 @@ data class ZkpIcaoData(
  * Parses the date of birth from DG1 in this [ZkpIcaoData], calculates the holder's age,
  * and returns a map of each threshold to whether the holder is >= that age.
  *
- * @param ageThresholds list of age thresholds (1–99) to check against.
+ * @param ageThresholds list of age thresholds (0–99) to check against.
  * @param referenceDate the date to calculate the age against. Defaults to today's date in UTC.
  *  This should match the circuit's `current_date` reference for consistency.
  * @return map where each key is a threshold and the value is `true` if the holder's age >= threshold.
@@ -297,9 +297,9 @@ private fun validateAgeAttestations(ageAttestations: Map<Int, Boolean>): Result<
     if (ageAttestations.size > 8) {
         return Result.failure(IllegalArgumentException("Age attestations must not exceed 8 entries"))
     }
-    val invalidAges = ageAttestations.keys.filter { it !in 1..99 }
+    val invalidAges = ageAttestations.keys.filter { it !in 0..99 }
     if (invalidAges.isNotEmpty()) {
-        return Result.failure(IllegalArgumentException("Age thresholds must be between 1 and 99, got: $invalidAges"))
+        return Result.failure(IllegalArgumentException("Age thresholds must be between 0 and 99, got: $invalidAges"))
     }
     return Result.success(Unit)
 }

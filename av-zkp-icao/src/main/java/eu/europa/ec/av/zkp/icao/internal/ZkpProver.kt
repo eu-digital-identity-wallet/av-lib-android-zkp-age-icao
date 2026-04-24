@@ -43,7 +43,7 @@ internal class ZkpProver(circuitJson: String, srsPath: String? = null, val logge
     /**
      * Builds inputs from inputJson and generates a proof.
      * @param inputJson The passport / ID card data in JSON format.
-     * @param ageAttestations Age attestation rules where key is the age threshold (1–99)
+     * @param ageAttestations Age attestation rules where key is the age threshold (0–99)
      * @return Result containing ProveResult on success.
      */
     fun prove(inputJson: String, ageAttestations: Map<Int, Boolean>): Result<String> = runCatching {
@@ -131,8 +131,10 @@ internal class ZkpProver(circuitJson: String, srsPath: String? = null, val logge
         val country = dscJson.getString("country")
         val salt = dscJson.getString("salt")
 
+        // rule_ages is an i8 array in the circuit. -1 (the sentinel for unused slots)
+        // is encoded as 0xff (255) in two's complement.
         val ruleAges = ageAttestations.keys.map { it.toDouble() }
-            .padEnd(MAX_RULES, 0.0)
+            .padEnd(MAX_RULES, 255.0)
         val ruleOps = ageAttestations.values.map { isOver -> if (isOver) 1.0 else 2.0 }
             .padEnd(MAX_RULES, 0.0)
 
