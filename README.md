@@ -72,7 +72,7 @@ To include the library in your project, add the dependency to your app module's 
 
 ```kotlin
 dependencies {
-    implementation("eu.europa.ec.eudi:av-lib-android-zkp-age-icao:0.0.1-SNAPSHOT")
+    implementation("eu.europa.ec.eudi:av-lib-android-zkp-age-icao:0.0.2-SNAPSHOT")
 }
 ```
 
