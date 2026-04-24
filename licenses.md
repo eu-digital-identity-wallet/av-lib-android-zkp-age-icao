@@ -1,7 +1,7 @@
 
 # Age Verification ZKP ICAO for Android
 ## Dependency License Report
-_2026-02-02 17:59:02 EET_
+_2026-04-24 13:55:00 EEST_
 ## Apache License, Version 2.0
 
 **1** **Group:** `androidx.core` **Name:** `core-ktx` **Version:** `1.17.0` 

@@ -1,6 +1,7 @@
 $dokka.format:gfm-v1
 $dokka.linkExtension:md
 $dokka.location:eu.europa.ec.av.zkp.icao////PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/index.md
+$dokka.location:eu.europa.ec.av.zkp.icao//buildAgeAttestations/eu.europa.ec.av.zkp.icao.ZkpIcaoData#kotlin.collections.List[kotlin.Int]#java.time.LocalDate/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/build-age-attestations.md
 $dokka.location:eu.europa.ec.av.zkp.icao/DataGroupNumber///PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-data-group-number/index.md
 $dokka.location:eu.europa.ec.av.zkp.icao/DataGroupNumber/DataGroupNumber/#kotlin.Int/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-data-group-number/-data-group-number.md
 $dokka.location:eu.europa.ec.av.zkp.icao/DataGroupNumber/value/#/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-data-group-number/value.md
@@ -8,8 +9,7 @@ $dokka.location:eu.europa.ec.av.zkp.icao/ExperimentalZkpIcaoApi///PointingToDecl
 $dokka.location:eu.europa.ec.av.zkp.icao/ZkpIcao///PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-icao/index.md
 $dokka.location:eu.europa.ec.av.zkp.icao/ZkpIcao/ZkpIcao/#android.content.Context#kotlin.String?#eu.europa.ec.av.zkp.icao.ZkpLogger?/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-icao/-zkp-icao.md
 $dokka.location:eu.europa.ec.av.zkp.icao/ZkpIcao/logger/#/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-icao/logger.md
-$dokka.location:eu.europa.ec.av.zkp.icao/ZkpIcao/prove/#eu.europa.ec.av.zkp.icao.ZkpIcaoData/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-icao/prove.md
-$dokka.location:eu.europa.ec.av.zkp.icao/ZkpIcao/verify/#kotlin.String/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-icao/verify.md
+$dokka.location:eu.europa.ec.av.zkp.icao/ZkpIcao/prove/#eu.europa.ec.av.zkp.icao.ZkpIcaoData#kotlin.collections.Map[kotlin.Int,kotlin.Boolean]/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-icao/prove.md
 $dokka.location:eu.europa.ec.av.zkp.icao/ZkpIcaoData///PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-icao-data/index.md
 $dokka.location:eu.europa.ec.av.zkp.icao/ZkpIcaoData/ZkpIcaoData/#kotlin.collections.Map[eu.europa.ec.av.zkp.icao.DataGroupNumber,kotlin.ByteArray]#kotlin.ByteArray#kotlin.ByteArray/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-icao-data/-zkp-icao-data.md
 $dokka.location:eu.europa.ec.av.zkp.icao/ZkpIcaoData/comFile/#/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-icao-data/com-file.md
@@ -23,5 +23,10 @@ $dokka.location:eu.europa.ec.av.zkp.icao/ZkpLogger/e/#kotlin.String#kotlin.Strin
 $dokka.location:eu.europa.ec.av.zkp.icao/ZkpLogger/i/#kotlin.String#kotlin.String/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-logger/i.md
 $dokka.location:eu.europa.ec.av.zkp.icao/ZkpLogger/v/#kotlin.String#kotlin.String/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-logger/v.md
 $dokka.location:eu.europa.ec.av.zkp.icao/ZkpLogger/w/#kotlin.String#kotlin.String#kotlin.Throwable?/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-logger/w.md
+$dokka.location:eu.europa.ec.av.zkp.icao/ZkpProofResult///PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-proof-result/index.md
+$dokka.location:eu.europa.ec.av.zkp.icao/ZkpProofResult/ZkpProofResult/#kotlin.collections.Map[kotlin.String,kotlin.Boolean]#kotlin.String/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-proof-result/-zkp-proof-result.md
+$dokka.location:eu.europa.ec.av.zkp.icao/ZkpProofResult/ageAttestations/#/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-proof-result/age-attestations.md
+$dokka.location:eu.europa.ec.av.zkp.icao/ZkpProofResult/proof/#/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-proof-result/proof.md
+$dokka.location:eu.europa.ec.av.zkp.icao/ZkpProofResult/toJson/#/PointingToDeclaration/av-zkp-icao/eu.europa.ec.av.zkp.icao/-zkp-proof-result/to-json.md
 eu.europa.ec.av.zkp.icao
 

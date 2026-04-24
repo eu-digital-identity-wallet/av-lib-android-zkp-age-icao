@@ -34,7 +34,7 @@ import java.time.ZonedDateTime
 internal class ZkpProver(circuitJson: String, srsPath: String? = null, val logger: ZkpLogger? = null) {
 
     private val circuit: Circuit by lazy {
-        Circuit.Companion.fromJsonManifest(circuitJson).apply {
+        Circuit.fromJsonManifest(circuitJson).apply {
             logger?.d(TAG, "Using SRS path: $srsPath")
             setupSrs(srsPath)
         }
@@ -43,10 +43,11 @@ internal class ZkpProver(circuitJson: String, srsPath: String? = null, val logge
     /**
      * Builds inputs from inputJson and generates a proof.
      * @param inputJson The passport / ID card data in JSON format.
+     * @param ageAttestations Age attestation rules where key is the age threshold (0–99)
      * @return Result containing ProveResult on success.
      */
-    fun prove(inputJson: String): Result<String> = runCatching {
-        val inputs = buildInputs(inputJson)
+    fun prove(inputJson: String, ageAttestations: Map<Int, Boolean>): Result<String> = runCatching {
+        val inputs = buildInputs(inputJson, ageAttestations)
 
         val start = System.nanoTime()
         val proof = circuit.prove(inputs)
@@ -74,7 +75,7 @@ internal class ZkpProver(circuitJson: String, srsPath: String? = null, val logge
 
 
     @OptIn(ExperimentalTime::class)
-    private fun buildInputs(inputJson: String): HashMap<String, Any> {
+    private fun buildInputs(inputJson: String, ageAttestations: Map<Int, Boolean>): HashMap<String, Any> {
         val jsonObj = JSONObject(inputJson)
 
         val dsc = jsonObj.getString("dsc")
@@ -130,6 +131,16 @@ internal class ZkpProver(circuitJson: String, srsPath: String? = null, val logge
         val country = dscJson.getString("country")
         val salt = dscJson.getString("salt")
 
+        // rule_ages is an i8 array in the circuit. -1 (the sentinel for unused slots)
+        // is encoded as 0xff (255) in two's complement.
+        val ruleAges = ageAttestations.keys.map { it.toDouble() }
+            .padEnd(MAX_RULES, 255.0)
+        val ruleOps = ageAttestations.values.map { isOver -> if (isOver) 1.0 else 2.0 }
+            .padEnd(MAX_RULES, 0.0)
+
+        val rulesLen = ageAttestations.size
+        val hexRulesLen = "0x" + rulesLen.toString(16)
+
         return hashMapOf(
             "csc_pubkey" to cscPubkey,
             "dsc_signature" to dscSignature,
@@ -151,7 +162,10 @@ internal class ZkpProver(circuitJson: String, srsPath: String? = null, val logge
             "certificate_tags" to certificateTags,
             "certificate_type" to certificateType,
             "country" to country,
-            "salt" to salt
+            "salt" to salt,
+            "rule_ages" to ruleAges,
+            "rule_ops" to ruleOps,
+            "rules_len" to hexRulesLen
         )
     }
 
@@ -161,7 +175,11 @@ internal class ZkpProver(circuitJson: String, srsPath: String? = null, val logge
     private fun JSONArray.toStringList(): List<String> =
         (0 until length()).map { i -> getString(i) }
 
+    private fun List<Double>.padEnd(size: Int, padValue: Double): List<Double> =
+        this + List(size - this.size) { padValue }
+
     companion object Companion {
         private const val TAG = "ZkpProver"
+        private const val MAX_RULES = 8
     }
 }
