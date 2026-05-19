@@ -90,6 +90,7 @@ class MainActivity : ComponentActivity(), NfcAdapter.ReaderCallback {
 
                             LaunchedEffect(Unit) {
                                 nfcViewModel.clearIsoDep()
+                                nfcViewModel.zkpIcaoData = null
                             }
 
                             NfcReaderScreen(
@@ -127,6 +128,9 @@ class MainActivity : ComponentActivity(), NfcAdapter.ReaderCallback {
         isoDep?.let { isd ->
             runOnUiThread {
                 val nfcViewModel: NfcViewModel = ViewModelProvider(this)[NfcViewModel::class.java]
+                if (nfcViewModel.getIsoDep() != null || nfcViewModel.zkpIcaoData != null) {
+                    return@runOnUiThread
+                }
                 nfcViewModel.updateIsoDep(isd)
             }
         }
