@@ -1,7 +1,7 @@
 
 # Age Verification ZKP ICAO for Android
 ## Dependency License Report
-_2026-04-24 13:55:00 EEST_
+_2026-05-19 20:55:05 EEST_
 ## Apache License, Version 2.0
 
 **1** **Group:** `androidx.core` **Name:** `core-ktx` **Version:** `1.17.0` 
@@ -24,7 +24,7 @@ _2026-04-24 13:55:00 EEST_
 
 ## MIT License
 
-**5** **Group:** `com.github.madztheo` **Name:** `noir_android` **Version:** `1.0.0-beta.8-2` 
+**5** **Group:** `com.github.madztheo` **Name:** `noir_android` **Version:** `1.0.0-beta.20-2` 
 > - **POM Project URL**: [https://github.com/madztheo/noir_android](https://github.com/madztheo/noir_android)
 > - **POM License**: MIT License - [https://opensource.org/licenses/MIT](https://opensource.org/licenses/MIT)
 

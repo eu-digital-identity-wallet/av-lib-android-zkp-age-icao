@@ -47,6 +47,8 @@ internal class ZkpProver(circuitJson: String, srsPath: String? = null, val logge
      * @return Result containing ProveResult on success.
      */
     fun prove(inputJson: String, ageAttestations: Map<Int, Boolean>): Result<String> = runCatching {
+
+        logger?.d(TAG, "Start building inputs")
         val inputs = buildInputs(inputJson, ageAttestations)
 
         val start = System.nanoTime()
@@ -107,7 +109,7 @@ internal class ZkpProver(circuitJson: String, srsPath: String? = null, val logge
         val eContent = idJson.getJSONArray("e_content").toDoubleList()
         val tbsCertificate = idJson.getJSONArray("tbs_certificate").toDoubleList()
 
-        val exponent = 65537
+        val exponent = dscJson.getInt("exponent")
         val hexExponent = "0x" + exponent.toString(16)
 
         // Current date rounded to the hour in UTC, e.g., 2024-01-01T12:00:00Z
@@ -121,15 +123,23 @@ internal class ZkpProver(circuitJson: String, srsPath: String? = null, val logge
         val nowHex = "0x" + expectedCurrentDate.toString(16)
 
         val certificateRegistryRoot = dscJson.getString("certificate_registry_root")
-        val certificateRegistryIndex =
-            "0x" + dscJson.getInt("certificate_registry_index").toString(16)
-        val certificateRegistryHashPath =
-            dscJson.getJSONArray("certificate_registry_hash_path").toStringList()
+        val certificateTreeIndex =
+            "0x" + dscJson.getInt("certificate_tree_index").toString(16)
+        val certificateTreeHashPath =
+            dscJson.getJSONArray("certificate_tree_hash_path").toStringList()
         val certificateTags =
             dscJson.getJSONArray("certificate_tags").toStringList()
         val certificateType = dscJson.getString("certificate_type")
         val country = dscJson.getString("country")
         val salt = dscJson.getString("salt")
+
+        val pssSaltLen = "0x${idJson.getInt("pss_salt_len").toString(16)}"
+        val cscExpiry = "0x${dscJson.getInt("csc_expiry").toString(16)}"
+        val timestamp = "0x${dscJson.getInt("timestamp").toString(16)}"
+        val cscFingerprint = dscJson.getString("csc_fingerprint")
+        val schemaVersion = "0x${dscJson.getInt("schema_version").toString(16)}"
+        val revocationTreeRoot = dscJson.getString("revocation_tree_root")
+        val masterListTreeRoot = dscJson.getString("masterlist_tree_root")
 
         // rule_ages is an i8 array in the circuit. -1 (the sentinel for unused slots)
         // is encoded as 0xff (255) in two's complement.
@@ -157,12 +167,21 @@ internal class ZkpProver(circuitJson: String, srsPath: String? = null, val logge
             "current_date" to nowHex,
 
             "certificate_registry_root" to certificateRegistryRoot,
-            "certificate_registry_index" to certificateRegistryIndex,
-            "certificate_registry_hash_path" to certificateRegistryHashPath,
+            "certificate_registry_index" to certificateTreeIndex,
+            "certificate_registry_hash_path" to certificateTreeHashPath,
             "certificate_tags" to certificateTags,
             "certificate_type" to certificateType,
             "country" to country,
             "salt" to salt,
+
+            "pss_salt_len" to pssSaltLen,
+            "csc_expiry" to cscExpiry,
+            "timestamp" to timestamp,
+            "csc_fingerprint" to cscFingerprint,
+            "schema_version" to schemaVersion,
+            "revocation_tree_root" to revocationTreeRoot,
+            "masterlist_tree_root" to masterListTreeRoot,
+
             "rule_ages" to ruleAges,
             "rule_ops" to ruleOps,
             "rules_len" to hexRulesLen
